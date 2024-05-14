@@ -1,0 +1,89 @@
+#ELASTIC ANALYSIS(SINUSOIDAL FORCE)
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Constants from M Paz (#Illustrative example 19.1)
+pi = np.pi
+k1 = 30.7
+k2 = 44.3
+m1 = 0.136
+m2 = 0.066
+c1 = 0
+c2 = 0
+theta = 1.4
+del_t=0.02
+tau = theta*del_t
+a1 = 3/tau
+a2=6/tau
+a3=tau/2
+a4=6/tau**2
+
+M = np.array([[m1,0],[0,m2]])
+K = np.array([[k1+k2,-k2],[-k2,k2]])
+C = np.array([[c1+c2,-c2],[-c2,c2]])
+
+eigenvalues, eigenvectors = np.linalg.eig(K @ np.linalg.inv(M))
+nat_freq = np.sqrt(eigenvalues)
+w1 = nat_freq[0]
+w2=nat_freq[1]
+
+p1=w1/2
+p2=w2/2
+T1=2*pi/w1
+T2=2*pi/w2
+Tmax=5*np.maximum(T1,T2)
+
+time=np.linspace(0,Tmax,200)
+
+F=np.zeros([2,len(time)])
+del_cap_Fbar = np.zeros([2,1])
+del_cap_F = np.zeros([2,1])
+
+disp =np.zeros([2,len(time)])
+vel =np.zeros([2,len(time)])
+acc =np.zeros([2,len(time)])
+
+#sinusoidal force input
+
+for i in range(0,len(time),1):
+ F[0,i]=10*np.sin(p1*time[i])
+ F[1,i]=10*np.sin(p1*time[i])
+
+acc[:,[0]] =np.dot(np.linalg.inv(M),F[:,[0]]-np.dot(K,disp[:,[0]]))
+K_bar = K + a4*M + a1*C
+
+for i in range(0,len(time)-2,1):
+ del_cap_F = F[:,[i+1]] + (F[:,[i+2]]-F[:,[i+1]])*(theta-1) - F[:,[i]]
+ del_cap_Fbar = del_cap_F + np.dot((a2*M + 3*C),vel[:,[i]]) + np.dot((3*M + a3*C),acc[:,[i]])
+ dcy=np.linalg.solve(K_bar,del_cap_Fbar)
+ delc_yddot = a4*dcy-a2*vel[:,[i]]-3*acc[:,[i]]
+ del_yddot = delc_yddot/theta
+ del_ydot = acc[:,[i]]*del_t + 1/2*del_yddot*del_t
+ del_y = vel[:,[i]]*del_t + 1/2*acc[:,[i]]*del_t**2 + 1/6*del_yddot*del_t**2
+
+ disp[:,[i+1]] = disp[:,[i]] + del_y
+ vel[:,[i+1]] = vel[:,[i]] + del_ydot
+ acc[:,[i+1]] = np.dot(np.linalg.inv(M),(F[:,[i+1]]-np.dot(K,disp[:,[i+1]])))
+
+#print(disp)
+#print(vel)
+#print(acc)
+
+#plt.plot(time,disp[0,:],label='displacement 01')
+#plt.plot(time,disp[1,:],label='displacement 02')
+#plt.xlabel("Time (seconds)")
+#plt.ylabel("Displacement(inches)")
+
+#plt.plot(time,vel[0,:],label='velocity 01')
+#plt.plot(time,vel[1,:],label='velocity 02')
+#plt.xlabel("Time (seconds)")
+#plt.ylabel("Velocity (metre/seconds)")
+
+plt.plot(time,acc[0,:],label='acceleration 01')
+plt.plot(time,acc[1,:],label='acceleration 02')
+plt.xlabel("Time (seconds)")
+plt.ylabel("Acceleration (metre/seconds square)")
+
+plt.legend()
+plt.grid()

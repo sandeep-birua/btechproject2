@@ -1,0 +1,82 @@
+#ELASTIC ANALYSIS(CONSTANT FORCE)
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Constants from M Paz (#Illustrative example 19.1)
+pi = np.pi
+k1 = 30.7
+k2 = 44.3
+m1 = 0.136
+m2 = 0.066
+c1 = 0
+c2 = 0
+del_t = 0.02
+theta = 1.4
+tau = theta*del_t
+a1 = 3/tau
+a2=6/tau
+a3=tau/2
+a4=(6/tau**2)
+
+M = np.array([[m1,0],[0,m2]])              #MASS MATRIX
+K = np.array([[k1+k2,-k2],[-k2,k2]])       #STIFFNESS MATRIX
+C = np.array([[c1+c2,-c2],[-c2,c2]])       #DAMPING MATRIX
+
+eigenvalues, eigenvectors = np.linalg.eig(K @ np.linalg.inv(M))
+nat_freq = np.sqrt(eigenvalues)
+w1 = nat_freq[0]                           #NATURAL FREQUENCY
+w2=nat_freq[1]                             #NATURAL FREQUENCY
+
+T1=(2*pi/w1)
+T2=(2*pi/w2)
+Tmax=5*np.maximum(T1,T2)
+
+time1=np.linspace(0,Tmax,21)
+ntime=time1.reshape(-1,1)
+
+del_cap_Fbar = np.zeros([2,1])
+del_cap_F = np.zeros([2,1])
+vel = np.zeros([2,len(time1)])            #ASSIGNING VALUES TO VELOCITY
+disp = np.zeros([2,len(time1)])           #ASSIGNING VALUES TO DISPLACEMENT
+acc = np.zeros([2,len(time1)])            #ASSIGNING VALUES TO ACCELERATION
+
+F0 = np.array([0,10]).reshape(-1,1)        #CONSTANT FORCE APPLIED TO MASS 1
+#F0 = np.array([10,0]).reshape(-1,1)       #CONSTANT FORCE APPLIED TO MASS 2
+#F0 = np.array([10,10]).reshape(-1,1)      #CONSTANT FORCE APPLIED TO BOTH THE MASSES
+
+acc[:,[0]] = np.dot(np.linalg.inv(M),F0)   #INITIAL ACCELERATION
+K_bar = np.round((K + a4*M + a1*C),4)
+
+for i in range(0,len(time1)-1,1):
+ del_cap_Fbar = del_cap_F + np.dot((a2*M + 3*C),vel[:,[i]]) + np.dot((3*M + a3*C),acc[:,[i]])
+ dcy=np.linalg.solve(K_bar,del_cap_Fbar)
+ delc_yddot = a4*dcy-a2*vel[:,[i]]-3*acc[:,[i]]
+ del_yddot = delc_yddot/theta
+ del_ydot = acc[:,[i]]*del_t + 1/2*del_yddot*del_t
+ del_y = vel[:,[i]]*del_t + 1/2*acc[:,[i]]*del_t**2 + 1/6*del_yddot*del_t**2
+
+ disp[:,[i+1]] = disp[:,[i]] + del_y                                      #DISPLACEMENT FOR FIRST STEP
+ vel[:,[i+1]] = vel[:,[i]] + del_ydot                                     #VELOCITY FOR FIRST STEP
+ acc[:,[i+1]] = np.dot(np.linalg.inv(M),(F0-np.dot(K,disp[:,[i+1]])))     #ACCELERATION FOR FIRST STEP
+
+#print(disp[0,:])                                                         #DISPLACEMENT VALUUES OUTPUT
+#print(vel[0,:])                                                          #VELOCITY VALUES OUTPUT
+#print(acc[0,:])                                                          #ACCELERATION VALUES OUTPUT
+plt.plot(time1,disp[0,:],label='displacement 01')                         #DISPLACEMENT 1 VS TIME OUTPUT
+plt.plot(time1,disp[1,:],label='displacement 02')                         #DISPLACEMENT 2 VS TIME OUTPUT
+plt.xlabel('Time')
+plt.ylabel('displacement')
+
+#plt.plot(time1,vel[0,:],label='velocity 01')                             #VELOCITY 1 VS TIME OUTPUT
+#plt.plot(time1,vel[1,:],label='velocity 02')                             #VELOCITY 2 VS TIME OUTPUT
+#plt.xlabel('Time')
+#plt.ylabel('velocity')
+
+#plt.plot(time1,acc[0,:],label='acceleration 01')                         #ACCELERATION 1 VS TIME OUTPUT
+#plt.plot(time1,acc[1,:],label='acceleration 01')                         #ACCELERATION VS TIME OUTPUT
+#plt.xlabel('Time')
+#plt.ylabel('acceleration')
+
+plt.legend()
+plt.grid()
